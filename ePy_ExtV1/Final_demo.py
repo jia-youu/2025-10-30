@@ -2,7 +2,7 @@
 # 功能：讀取 HTU21D 溫濕度感測器、AIN5 類比輸入，顯示於 OLED，並透過 Mesh 網路傳送
 # 註解皆為中文，遵守 PEP8 規範
 
-from mesh_device import MeshDevice
+from lib.mesh_device import MeshDevice
 from ssd1306 import SSD1306_I2C
 from htu21d import HTU21D
 from machine import I2C, Pin, ADC
