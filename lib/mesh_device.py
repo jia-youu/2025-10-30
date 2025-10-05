@@ -38,10 +38,15 @@ class MeshDevice:
         回傳: True 表示訊息已處理，False 表示非狀態訊息
         """
         if b'SYS-MSG DEVICE PROV-ED' in line or b'PROV-MSG SUCCESS' in line:
-            # 取得 UID
             parts = line.strip().split(b' ')
-            if len(parts) >= 1:
-                self.uid = self.bytes_to_str(parts[-1])
+            uid_candidate = None
+            for token in parts[::-1]:
+                token = token.strip()
+                if token.startswith(b'0x') and len(token) > 2:
+                    uid_candidate = token
+                    break
+            if uid_candidate is not None:
+                self.uid = self.bytes_to_str(uid_candidate)
             self.is_bound = True
             self.last_status = 'PROV-ED'
             return True
@@ -88,6 +93,28 @@ class MeshDevice:
             b.append(ord(c))
         return bytes(b)
 
+    def bytes_to_str(self, b):
+        """
+        將 bytes 逐字元轉為 str（無 decode）
+        """
+        chars = []
+        for c in b:
+            chars.append(chr(c))
+        return ''.join(chars)
+
+    def hex_string_to_bytes(self, hex_string):
+        """
+        將十六進制字串轉 bytes
+        """
+        if len(hex_string) % 2 != 0:
+            # 長度非偶數，無法正確轉換
+            raise ValueError("Hex string length must be even")
+        b = bytearray()
+        for i in range(0, len(hex_string), 2):
+            byte = int(hex_string[i:i+2], 16)
+            b.append(byte)
+        return bytes(b)
+
     def set_data(self, data):
         """
         設定自身資料，需已綁定才可傳送
@@ -99,6 +126,8 @@ class MeshDevice:
         # 將數字先轉為字串
         if isinstance(data, (int, float)):
             data = str(data)
+        if isinstance(data, bytes):
+            data = self.bytes_to_str(data)
         # 將字串轉為 hex 字串（大寫），再轉 bytes
         if isinstance(data, str):
             hexstr = ''
@@ -106,9 +135,9 @@ class MeshDevice:
                 hexstr += '{:02X}'.format(ord(c))
             data = self.str_to_bytes(hexstr)
 
-        # 限制 data 長度 < 20 bytes，過長自動截斷
-        if len(data) > 20:
-            data = data[:20]
+        # 限制 data 長度 < 40 hex chars，過長自動截斷
+        if len(data) > 40:
+            data = data[:40]
         # AT+MDTS=<data>\r\n
         cmd = b'AT+MDTS 0 ' + data + b'\r\n'
         self.uart.write(cmd)
@@ -134,11 +163,9 @@ class MeshDevice:
                         self._debug_print("[系統] 已解除綁定")
                     continue
                 # 嘗試解析 MDTS-MSG (設定資料訊息)
-                if b'MDTS-MSG' in buffer:
+                if b'MDTS-MSG' in buffer or b'MDTGP-MSG' in buffer:
                     if b'MDTS-MSG SUCCESS' in buffer:
-                        # 情況 1: 自己傳送資料成功的確認訊息
-                        return
-                        # return ('MDTS-MSG', b'SUCCESS')
+                        return ('MDTS-MSG', b'SUCCESS')
                     else:
                         # 情況 2: 從其他 provision 節點收到資料
                         # 格式: MDTS-MSG 0x0028 0 31
@@ -147,27 +174,19 @@ class MeshDevice:
                             sender = self.bytes_to_str(
                                 parts[1])  # 0x0028 (發送者地址)
                             data = self.bytes_to_str(parts[3])    # 31 (資料內容)
-                            return ('MDTS-MSG', {'sender': sender, 'data': data})
+                            return (self.bytes_to_str(parts[0]),
+                                    {'sender': sender, 'data': self.hex_string_to_bytes(data)})
                 # 嘗試解析 MDTSG-MSG
-                idx = buffer.find(b'MDTSG-MSG:')
+                idx = buffer.find(b'MDTSG-MSG')
                 if idx >= 0:
                     msg = buffer[idx+10:]
                     return ('MDTSG-MSG', msg.strip())
-                idx2 = buffer.find(b'MDTPG:')
-                if idx2 >= 0:
-                    msg = buffer[idx2+6:]
-                    return ('MDTPG', msg.strip())
+                # idx2 = buffer.find(b'MDTPG')
+                # if idx2 >= 0:
+                #     msg = buffer[idx2+6:]
+                #     return ('MDTPG', msg.strip())
                 self._debug_print("其他訊息:", buffer.strip())
         return None
-
-    def bytes_to_str(self, b):
-        """
-        將 bytes 逐字元轉為 str（無 decode）
-        """
-        chars = []
-        for c in b:
-            chars.append(chr(c))
-        return ''.join(chars)
 
 
 if __name__ == "__main__":

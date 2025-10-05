@@ -21,6 +21,9 @@
 - epy micrioPython 硬體API 與一般 Python API 不一樣，請參考 ./MicroPython_API/ 目錄下 所有相關 .md 檔案
 - 不建構測試環境，直接在 ePy 開發板上測試
 - 不使用模擬器 (Simulator) 或線上IDE (Online IDE)
+- 沒有 reversed()
+- 沒有 string.encode()
+- 沒有 string.decode()
 
 # ePy 內建硬體模組
 - 參考 ./MicroPython_API/ 目錄下 所有相關 .md 檔案
