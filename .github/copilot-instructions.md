@@ -1,48 +1,42 @@
-## ePy_Basic — Copilot 指示（專案摘要與本地慣例）
+## 快速說明 — ePy_Basic 專案 (給自動化程式碼助理)
 
-下面為讓 AI 立刻在本專案中有生產力所需的關鍵知識、範例與可遵循規則。內容均來自專案中可發現的檔案（`AGENTS.md`, `README.md`, 以及 `MicroPython_API/` 與 `lib/` 目錄）。請只採用可驗證的模式與約定。
+以下為在此專案中立刻能夠產生安全、可運行程式碼所必須知道的重點；請只依據專案中可被發現的約定與範例編寫或修改程式碼。
 
-### 1) 大局架構與目的
-- 本專案為 ePy MicroPython 範例集合與驅動程式（device drivers / utilities），目的是在實體 ePy MCU 上示範硬體互動（OLED、HTU21D、RGB LED、Mesh/BLE via UART 等）。
-- 重要目錄：
-  - `lib/`：擴充套件 library（例如 `ssd1306.py`, `htu21d.py`, `mesh_device.py`）。程式直接 import，不需變更 sys.path。
-  - `MicroPython_API/`：描述 I2C/UART/TIMER 等硬體 API 與限制的文件（首要參考來源）。
-  - 範例檔案分散在根目錄與 `ePy_ExtV1/`, `backup/` 等。
+- 此專案目標：提供基於 ePy（MicroPython） 的硬體驅動範例與教學範例（參考 `led_demo.py`, `ePy_ExtV1/oled_demo.py` 等）。
+- 重要目錄：`lib/`（驅動與工具庫）、`MicroPython_API/`（硬體 API 與 AT 指令規範說明）、範例檔在專案根目錄與 `ePy_ExtV1/`。
 
-### 2) 關鍵約定（必須遵守）
-- 語言/環境：MicroPython（ePy 平台），非完整 CPython；許多標準模組缺失或替代（見 `AGENTS.md`）。
-- 禁止/替代列表（務必遵守）：
-  - 不使用 f-string；改用 `string.format()`。
-  - 沒有 `time`、`json`、`re`... 使用替代模組 `utime`, `ujson`, `ure`。
-  - 不使用 class（專案以 function 為主）、decorator、generator、async/await、lambda。
-  - 不使用中斷；使用 polling（utime.ticks_ms()）進行時間判斷。
-  - UART 讀寫必須使用 bytes（不要用 str 處理串列輸入/輸出）。
-  - 遵守 PEP8（命名/縮排）與中文註解說明程式用途（專案目標為教學）。
+### 關鍵語言 / 執行環境限制（必讀）
+- 目標執行環境是 ePy 的 MicroPython：有多項標準 Python 模組不可用或替代品不同（來源：`AGENTS.md`）。
+- 不支援 f-string：請使用 string.format()。不要使用 `string.encode()` / `string.decode()`。
+- 沒有 `time`、`json`、`re`、`queue`、`threading` 等標準模組：分別使用 `utime`, `ujson`, `ure`, `uqueue`, `_thread`。
+- 不使用 class、decorator、generator、async/await 或 lambda；用「函式」和明確的 polling（utime.ticks_ms）來處理時序。
+- UART 與 I2C 實作與桌面 Python 不同：UART read/write 請以 bytes 處理（例：參考 `MicroPython_API/UART.md` 與 `lib/mesh_device.py`）。
 
-### 3) 常見整合點與範例
-- OLED（I2C0）：參考 `lib/ssd1306.py`，範例檔 `ePy_ExtV1/oled_demo.py` 與 `backup/oled.py`。顯示大小為 128x64。
-- 溫濕度感測：`lib/htu21d.py`，接在 I2C0。
-- Mesh / BLE：透過 UART（UART0、UART1），AT command 文件在 `MicroPython_API/MESH_Device_ATCMD.md`，範例與 helper在 `lib/mesh_device.py`。
-- RGB LED：可用 `machine.LED('LED.RGB')` 控制（見 `AGENTS.md`）。
+### 專案程式風格與注記慣例
+- 程式需遵守 PEP8（排版風格），但語法需符合 MicroPython 限制。
+- 註解請以中文撰寫，目標為初學者可讀（AGENTS.md 要求）。
+- Import 第三方或內建專用驅動請直接 `import`（`lib/` 已在 sys.path 中，可直接 import，如 `import htu21d`、`import ssd1306`）。
 
-### 4) 編寫/修改程式時要點（AI 指令化建議）
-- 產生程式碼時，優先參考 `MicroPython_API/*.md` 與 `lib/*.py` 的使用方式與參數範例。
-- 生成範例時以 function 為單位，避免引入 classes 或複雜語法特性。
-- 字串處理：避免使用 `.format()` 以外的字串插值；若產生序列化程式碼，使用 `ujson`。
-- UART 範例：輸入/輸出都以 bytes 處理（例：b"AT+...\r\n"），不要使用 `.encode()` / `.decode()`。
+### 常見檔案與範例（參考）
+- 範例燈號：`led_demo.py`（根目錄） — 查看如何控制板上 LED。
+- OLED 與感測器：`lib/ssd1306.py`, `lib/htu21d.py`、`ePy_ExtV1/oled_demo.py`。
+- Mesh / BLE：`lib/mesh_device.py` 與 `MicroPython_API/MESH_Device_ATCMD.md`（UART0/UART1 的使用注意波特率 115200）。
 
-### 5) 測試與開發工作流程（可觀察到的慣例）
-- 本專案以實機測試為主，**不使用模擬器或線上 IDE**；測試須在 ePy 開發板上進行（見 `AGENTS.md`）。
-- 檔案部署/Flashing 並非專案內定義的步驟（repo 未包含上傳腳本）；若需新增上傳說明，請在 PR 中明確標註工具（例如 ampy / rshell / Thonny）與範例命令。
+### 編輯 / 測試 / 驗證流程（專案特有）
+- 不建立模擬測試：所有功能在實體 ePy 開發板上測試（不要引入模擬器、線上 IDE 或桌面特有 API）。
+- 測試步驟建議（可放入 PR 描述）：1) 編寫/修改 `.py`，2) 透過使用者慣用工具（如 ampy / rshell /板端同步工具）上傳到開發板，3) 在板上觀察輸出或顯示器/感測器行為。
 
-### 6) 範例片段（風格指引）
-- 使用 utime 輪詢代替中斷（概念）:
+### 產生/修改程式碼時的具體範例指引
+- 若需等待：使用 `utime.ticks_ms()` 與差值比較做 polling，而非中斷或 sleep 長時間。
+- UART 讀寫：始終以 bytes 處理資料；範例回傳請使用 `b"..."`。
+- 字串格式化：`"Temperature: {} C".format(temp)`。
 
-  - 以 `utime.ticks_ms()` 做時間差計算，而非 sleep-blocking 的長延遲。
+### 不要做的事（常見錯誤）
+- 不要使用 f-strings、async/await、裝飾器、生成器或 lambda。
+- 不要假設標準 Python 的完整標準庫（請先查 `MicroPython_API/` 對應說明）。
 
-### 7) 編輯/提交建議
-- 保持註解為中文，清楚說明 hardware pin、I2C 地址與初始化參數（方便初學者閱讀）。
-- 若修改 `lib/` 中的驅動，請在檔案頂端保留簡短使用說明與相容資訊（例：支援哪個 I2C bus、預設位址）。
+### 如果需要更多上下文
+- 先打開 `AGENTS.md`（專案已放置板固有限制與硬體對應清單）與 `MicroPython_API/*.md`（I2C/UART/MESH 指令）來確認 API 行為。
 
 ---
-如果這份指示檔中有遺漏的專案慣例（例如特定上傳工具或常用硬體腳位表），請告訴我，我會把實際檔案或使用流程整合進來並更新此檔案。感謝回饋！
+若有任何專案內部慣例或硬體細節看起來不完整，請回報給 repo 擁有者並附上你依據的檔案與行數；我可以依照回饋進行迭代更新。
