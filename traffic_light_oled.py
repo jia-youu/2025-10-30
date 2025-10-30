@@ -179,10 +179,10 @@ def main():
 
             down_state = btn_down.value()
             if last_down == 1 and down_state == 0:
-                # 按下下鍵 -> 切換到短模式（綠2s 黃2s 紅2s）
+                # 按下下鍵 -> 切換到長模式（綠6s 黃2s 紅6s）
                 utime.sleep_ms(50)
                 if btn_down.value() == 0:
-                    mode = 'normal_short'
+                    mode = 'normal_long'
                     start = utime.ticks_ms()
             last_down = down_state
 
